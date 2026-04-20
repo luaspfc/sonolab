@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SonoLab — Recondicionamento do Sono</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b14;
+    --surface: #111220;
+    --surface2: #191a2e;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e8e9f3;
+    --muted: #6b6d8a;
+    --border: rgba(108,99,255,0.15);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SHELL ── */
+  #app {
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 0 0 80px;
+    animation: fadeIn .35s ease;
+  }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 52px 24px 16px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -.5px;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff;
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottomnav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 420px;
+    background: rgba(17,18,32,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 8px 0 env(safe-area-inset-bottom, 0px);
+    z-index: 100;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all .2s;
+    border: none; background: none; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px; letter-spacing: .3px;
+  }
+  .nav-item.active { color: var(--accent2); }
+  .nav-item svg { width: 22px; height: 22px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 0 16px 12px;
+  }
+  .card-sm {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  /* ── SCORE RING ── */
+  .score-ring-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    margin: 8px 0 16px;
+  }
+  .score-ring {
+    position: relative;
+    width: 160px; height: 160px;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring-inner {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px; font-weight: 800;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  .score-label { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── PROGRESS BAR ── */
+  .prog-wrap { margin: 8px 0; }
+  .prog-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .prog-track {
+    height: 6px; background: rgba(255,255,255,.06);
+    border-radius: 99px; overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── MISSION CARD ── */
+  .mission-card {
+    background: linear-gradient(135deg, rgba(108,99,255,.15), rgba(167,139,250,.08));
+    border: 1px solid rgba(108,99,255,.3);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 0 16px 12px;
+  }
+  .mission-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(108,99,255,.2);
+    border-radius: 99px; padding: 4px 10px;
+    font-size: 11px; color: var(--accent2); margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: .8px;
+  }
+  .mission-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .mission-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── BTN ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    color: #fff; border: none; border-radius: 14px;
+    padding: 14px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: all .2s;
+    width: 100%;
+  }
+  .btn:active { transform: scale(.97); opacity: .9; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-sm {
+    padding: 10px 16px;
+    font-size: 13px; border-radius: 10px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .sec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted);
+    padding: 4px 24px 10px;
+  }
+
+  /* ── TOGGLE ROW (check-in) ── */
+  .toggle-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin: 12px 16px;
+  }
+  .toggle-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; padding: 14px 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; cursor: pointer;
+    transition: all .2s; font-size: 12px; color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+  }
+  .toggle-btn .icon { font-size: 24px; filter: grayscale(1); transition: filter .2s; }
+  .toggle-btn.on {
+    border-color: var(--accent);
+    background: rgba(108,99,255,.12);
+    color: var(--accent2);
+  }
+  .toggle-btn.on .icon { filter: none; }
+
+  /* ── SLIDER ── */
+  .slider-wrap { margin: 4px 16px 16px; }
+  .slider-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+  .slider-val { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent2); }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 99px;
+    background: rgba(255,255,255,.07); outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    cursor: pointer; box-shadow: 0 0 0 4px rgba(108,99,255,.2);
+  }
+
+  /* ── MITOS STORY ── */
+  .story-screen {
+    background: linear-gradient(160deg, #0f0c2e 0%, #0a0b14 60%);
+    min-height: 100vh; padding: 0;
+    display: none; flex-direction: column;
+    position: fixed; inset: 0; z-index: 200;
+    animation: fadeIn .3s ease;
+  }
+  .story-screen.active { display: flex; }
+  .story-progress {
+    display: flex; gap: 4px; padding: 52px 20px 16px;
+  }
+  .story-seg {
+    flex: 1; height: 3px; background: rgba(255,255,255,.2);
+    border-radius: 99px; overflow: hidden;
+  }
+  .story-seg-fill {
+    height: 100%; width: 0; background: #fff;
+    transition: width 4s linear;
+  }
+  .story-seg-fill.done { width: 100%; transition: none; }
+  .story-content {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; padding: 20px 28px;
+    gap: 16px;
+  }
+  .story-tag {
+    display: inline-block; background: rgba(108,99,255,.3);
+    border: 1px solid rgba(108,99,255,.4);
+    color: var(--accent2); border-radius: 99px;
+    padding: 5px 14px; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px; width: fit-content;
+  }
+  .story-headline {
+    font-family: 'Syne', sans-serif; font-size: 26px;
+    font-weight: 800; line-height: 1.2;
+  }
+  .story-body { font-size: 15px; color: rgba(232,233,243,.75); line-height: 1.65; }
+  .story-cta {
+    padding: 20px 24px 32px;
+  }
+
+  /* ── ONBOARDING ── */
+  .onboard-wrap { flex: 1; display: flex; flex-direction: column; padding: 60px 28px 24px; }
+  .onboard-step { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .onboard-q { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
+  .onboard-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+  .option-list { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .option-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; cursor: pointer; transition: all .2s;
+    font-size: 15px;
+  }
+  .option-item:active, .option-item.selected {
+    border-color: var(--accent);
+    background: rgba(108,99,255,.12);
+    color: var(--accent2);
+  }
+  .option-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--muted); flex-shrink: 0;
+    transition: all .2s;
+  }
+  .option-item.selected .option-dot {
+    background: var(--accent); border-color: var(--accent);
+  }
+
+  /* ── SCORE FINAL ── */
+  .score-reveal {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 28px;
+    text-align: center;
+  }
+  .score-reveal h2 {
+    font-family: 'Syne', sans-serif; font-size: 22px;
+    margin: 24px 0 8px;
+  }
+  .score-reveal p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── UNLOCK BADGE ── */
+  .unlock-row {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(52,211,153,.08);
+    border: 1px solid rgba(52,211,153,.2);
+    border-radius: 14px; padding: 12px 16px;
+    margin: 0 16px 12px;
+  }
+  .unlock-icon { font-size: 22px; }
+  .unlock-text { font-size: 13px; color: var(--green); font-weight: 500; }
+
+  /* ── INSIGHT CARD ── */
+  .insight-card {
+    background: rgba(251,191,36,.06);
+    border: 1px solid rgba(251,191,36,.2);
+    border-radius: 16px; padding: 16px;
+    margin: 0 16px 12px;
+  }
+  .insight-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .insight-header span { font-size: 14px; color: var(--amber); font-weight: 600; }
+  .insight-body { font-size: 13px; color: rgba(232,233,243,.7); line-height: 1.55; }
+
+  /* BG BLOBS */
+  .blob {
+    position: fixed; border-radius: 50%;
+    filter: blur(90px); pointer-events: none; z-index: 0;
+    opacity: .12;
+  }
+  .blob1 { width: 260px; height: 260px; background: #6c63ff; top: -80px; right: -60px; }
+  .blob2 { width: 200px; height: 200px; background: #a78bfa; bottom: 100px; left: -80px; }
+
+  /* util */
+  .px24 { padding-left: 24px; padding-right: 24px; }
+  .mt4 { margin-top: 4px; }
+  .mt8 { margin-top: 8px; }
+  .mt12 { margin-top: 12px; }
+  .gap8 { gap: 8px; }
+  .flex { display: flex; }
+  .row { display: flex; align-items: center; }
+  .between { justify-content: space-between; }
+  .text-muted { color: var(--muted); font-size: 13px; }
+  .text-green { color: var(--green); }
+  .text-amber { color: var(--amber); }
+  .fw7 { font-weight: 700; }
+  .syne { font-family: 'Syne', sans-serif; }
+</style>
+</head>
+<body>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<div id="app">
+
+  <!-- ═══════════════ ONBOARDING ═══════════════ -->
+  <div id="screen-onboard" class="screen active" style="padding-bottom:0">
+    <div class="onboard-wrap" id="onboard-container">
+      <!-- injected by JS -->
+    </div>
+  </div>
+
+  <!-- ═══════════════ HOME / DASHBOARD ═══════════════ -->
+  <div id="screen-home" class="screen">
+    <div class="topbar">
+      <div class="logo">SonoLab</div>
+      <div class="avatar" id="avatar-initials">L</div>
+    </div>
+
+    <div class="card" style="text-align:center; padding: 24px 20px 20px">
+      <div class="text-muted" style="font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Score de Higiene do Sono</div>
+      <div class="score-ring-wrap">
+        <div class="score-ring">
+          <svg viewBox="0 0 160 160" width="160" height="160">
+            <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12"/>
+            <circle cx="80" cy="80" r="68" fill="none"
+              stroke="url(#ring-grad)" stroke-width="12"
+              stroke-linecap="round"
+              stroke-dasharray="427"
+              id="ring-progress"
+              stroke-dashoffset="427"/>
+            <defs>
+              <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6c63ff"/>
+                <stop offset="100%" stop-color="#a78bfa"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="score-ring-inner">
+            <span class="score-num" id="shi-score">—</span>
+            <span class="score-label">SHI</span>
+          </div>
+        </div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span>Consciência</span>
+          <span id="consciousness-pts">0 pts</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="consciousness-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- INSIGHT -->
+    <div class="insight-card" id="insight-box" style="display:none">
+      <div class="insight-header">
+        <span>⚠️ Seu sabotador detectado</span>
+      </div>
+      <div class="insight-body" id="insight-text"></div>
+    </div>
+
+    <!-- MISSÃO DO DIA -->
+    <div class="mission-card">
+      <div class="mission-badge">🎯 Missão do dia</div>
+      <div class="mission-title" id="mission-title">Faça seu primeiro Check-in</div>
+      <div class="mission-desc" id="mission-desc">Registre como foi sua noite para começarmos a encontrar seus padrões de sono.</div>
+    </div>
+
+    <!-- MITOS DESBLOQUEADOS -->
+    <div class="unlock-row" id="unlock-row" style="display:none">
+      <div class="unlock-icon">🔓</div>
+      <div class="unlock-text" id="unlock-text">Novo mito desbloqueado! Toque em Mitos para ver.</div>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="px24">
+      <div class="sec-title" style="padding-left:0">Resumo</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px">
+        <div class="card-sm" style="text-align:center">
+          <div class="syne fw7" style="font-size:26px; color:var(--accent2)" id="stat-dias">0</div>
+          <div class="text-muted" style="margin-top:2px">dias seguidos</div>
+        </div>
+        <div class="card-sm" style="text-align:center">
+          <div class="syne fw7" style="font-size:26px; color:var(--green)" id="stat-acoes">0</div>
+          <div class="text-muted" style="margin-top:2px">ações aplicadas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CHECK-IN ═══════════════ -->
+  <div id="screen-checkin" class="screen">
+    <div class="topbar">
+      <div class="logo">Check-in</div>
+      <div class="text-muted" id="checkin-date" style="font-size:13px"></div>
+    </div>
+
+    <div class="sec-title">Como foi a noite?</div>
+    <div class="slider-wrap">
+      <div class="slider-header">
+        <span>Qualidade do sono</span>
+        <span class="slider-val" id="val-sleep">5</span>
+      </div>
+      <input type="range" min="0" max="10" value="5" id="sl-sleep"
+        oninput="document.getElementById('val-sleep').textContent=this.value">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-header">
+        <span>Tempo para adormecer (min)</span>
+        <span class="slider-val" id="val-latency">20</span>
+      </div>
+      <input type="range" min="0" max="120" value="20" step="5" id="sl-latency"
+        oninput="document.getElementById('val-latency').textContent=this.value+'min'">
+    </div>
+
+    <div class="sec-title" style="margin-top:8px">Comportamentos de hoje</div>
+    <div class="toggle-grid">
+      <div class="toggle-btn" onclick="toggleBtn(this,'cafe')" data-key="cafe">
+        <span class="icon">☕</span><span>Café tarde</span>
+      </div>
+      <div class="toggle-btn" onclick="toggleBtn(this,'alcool')" data-key="alcool">
+        <span class="icon">🍷</span><span>Álcool</span>
+      </div>
+      <div class="toggle-btn" onclick="toggleBtn(this,'telas')" data-key="telas">
+        <span class="icon">📱</span><span>Telas noite</span>
+      </div>
+      <div class="toggle-btn" onclick="toggleBtn(this,'exercicio')" data-key="exercicio">
+        <span class="icon">🏃</span><span>Exercício</span>
+      </div>
+      <div class="toggle-btn" onclick="toggleBtn(this,'stress')" data-key="stress">
+        <span class="icon">😰</span><span>Estresse</span>
+      </div>
+      <div class="toggle-btn" onclick="toggleBtn(this,'meditacao')" data-key="meditacao">
+        <span class="icon">🧘</span><span>Meditação</span>
+      </div>
+    </div>
+
+    <div class="slider-wrap" style="margin-top:8px">
+      <div class="slider-header">
+        <span>Humor geral</span>
+        <span class="slider-val" id="val-mood">5</span>
+      </div>
+      <input type="range" min="0" max="10" value="5" id="sl-mood"
+        oninput="document.getElementById('val-mood').textContent=this.value">
+    </div>
+
+    <div class="px24" style="margin-top:8px">
+      <button class="btn" onclick="submitCheckin()">💾 Salvar Check-in</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MITOS ═══════════════ -->
+  <div id="screen-mitos" class="screen">
+    <div class="topbar">
+      <div class="logo">Mitos do Sono</div>
+      <div class="text-muted" style="font-size:13px" id="mitos-count"></div>
+    </div>
+
+    <div id="mitos-list" style="padding: 0 16px; display:flex; flex-direction:column; gap:10px;"></div>
+  </div>
+
+  <!-- ═══════════════ STORY OVERLAY ═══════════════ -->
+  <div id="story-overlay" class="story-screen">
+    <div class="story-progress" id="story-progress"></div>
+    <div class="story-content" id="story-content"></div>
+    <div class="story-cta">
+      <button class="btn" id="story-cta-btn">➜ Próximo</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PERFIL ═══════════════ -->
+  <div id="screen-perfil" class="screen">
+    <div class="topbar">
+      <div class="logo">Perfil</div>
+    </div>
+    <div style="padding: 8px 24px; display:flex; flex-direction:column; gap:14px;">
+      <div class="card-sm" style="display:flex; gap:16px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px">
+        <div class="avatar" style="width:56px;height:56px;font-size:20px" id="perfil-avatar">L</div>
+        <div>
+          <div class="syne fw7" style="font-size:18px" id="perfil-nome">—</div>
+          <div class="text-muted mt4">Nível: <span id="perfil-nivel" style="color:var(--accent2)">Iniciante</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+        <div class="card-sm" style="text-align:center">
+          <div class="syne fw7" style="font-size:22px; color:var(--accent2)" id="p-shi">—</div>
+          <div class="text-muted" style="font-size:11px; margin-top:2px">Score SHI</div>
+        </div>
+        <div class="card-sm" style="text-align:center">
+          <div class="syne fw7" style="font-size:22px; color:var(--green)" id="p-cons">0</div>
+          <div class="text-muted" style="font-size:11px; margin-top:2px">Consciência</div>
+        </div>
+        <div class="card-sm" style="text-align:center">
+          <div class="syne fw7" style="font-size:22px; color:var(--amber)" id="p-dias">0</div>
+          <div class="text-muted" style="font-size:11px; margin-top:2px">Dias seguidos</div>
+        </div>
+      </div>
+
+      <div class="card-sm" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px">
+        <div class="sec-title" style="padding:0 0 10px; font-size:11px">Histórico de check-ins</div>
+        <div id="checkin-history" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto">
+          <div class="text-muted" style="text-align:center; padding:16px">Sem check-ins ainda.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="resetApp()" style="margin-top:4px">↺ Reiniciar app (demo)</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+  <nav class="bottomnav" id="bottomnav" style="display:none">
+    <button class="nav-item active" onclick="goTo('home',this)" id="nav-home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Início
+    </button>
+    <button class="nav-item" onclick="goTo('checkin',this)" id="nav-checkin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Check-in
+    </button>
+    <button class="nav-item" onclick="goTo('mitos',this)" id="nav-mitos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Mitos
+    </button>
+    <button class="nav-item" onclick="goTo('perfil',this)" id="nav-perfil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Perfil
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let state = JSON.parse(localStorage.getItem('sonolab') || 'null') || {
+  onboarded: false,
+  nome: '',
+  shi: 0,
+  consciousness: 0,
+  diasSeguidos: 0,
+  acoesAplicadas: 0,
+  checkins: [],
+  mitosDesbloqueados: [],
+  mitosLidos: [],
+  acoesFeitas: [],
+  toggles: {}
+};
+
+function save() { localStorage.setItem('sonolab', JSON.stringify(state)); }
+
+// ═══════════════════════════════════════════════
+// CONTEÚDO DOS MITOS (10 cards)
+// ═══════════════════════════════════════════════
+const MITOS = [
+  {
+    id: 'cafe', nivel: 0, categoria: 'cafe',
+    titulo: '"Uma xícara à tarde não afeta meu sono"',
+    mito: '☕ O Mito',
+    realidade: 'A cafeína tem meia-vida de 5 a 7 horas. Uma xícara às 15h ainda tem metade da cafeína circulando às 21h — exatamente quando você tenta relaxar.',
+    sabotador: 'Ela bloqueia a adenosina, o sinal químico do seu cérebro que acumula "pressão de sono" ao longo do dia.',
+    acao: 'Última cafeína até 13h (ou 14h no máximo). Troque por chá de camomila à tarde.',
+    peso: 5
+  },
+  {
+    id: 'alcool', nivel: 0, categoria: 'alcool',
+    titulo: '"Vinho me ajuda a dormir"',
+    mito: '🍷 O Mito',
+    realidade: 'O álcool pode acelerar o início do sono, mas fragmenta severamente a segunda metade da noite — destruindo o sono REM reparador.',
+    sabotador: 'Na madrugada, quando o álcool é metabolizado, ocorre um "rebote" de ativação cerebral. Você acorda sem saber por quê.',
+    acao: 'Se for beber, finalize 3h antes de dormir. Nenhum copo dentro de 2h do horário de dormir.',
+    peso: 5
+  },
+  {
+    id: 'telas', nivel: 0, categoria: 'telas',
+    titulo: '"Uso celular no escuro, não tem problema"',
+    mito: '📱 O Mito',
+    realidade: 'A luz azul emitida suprime a melatonina em até 50%, atrasando o sinal de sono do seu cérebro em 1-3 horas.',
+    sabotador: 'Pior: o conteúdo das redes ativa o sistema de recompensa dopaminérgico, deixando o cérebro em estado de alerta quando deveria desacelerar.',
+    acao: 'Modo avião + telas off 1h antes de dormir. Use modo noturno se precisar usar o celular.',
+    peso: 4
+  },
+  {
+    id: 'reposicao', nivel: 0, categoria: 'comportamento',
+    titulo: '"Reparo o sono perdido no fim de semana"',
+    mito: '🛏️ O Mito',
+    realidade: 'Estudos mostram que você pode reduzir a sonolência subjetiva, mas déficits cognitivos e metabólicos acumulados em semanas não são restaurados em 1-2 dias.',
+    sabotador: 'Dormir até tarde no sábado atrasa seu relógio circadiano — e você terá dificuldade para dormir no domingo, agravando a "segunda-feira morta".',
+    acao: 'Varie no máximo 1h do seu horário habitual nos fins de semana. Consistência supera compensação.',
+    peso: 4
+  },
+  {
+    id: 'ansiedade', nivel: 0, categoria: 'stress',
+    titulo: '"Não consigo desligar a cabeça na cama"',
+    mito: '🧠 O Mito (que é real)',
+    realidade: 'A cama foi condicionada ao estado de alerta. Seu cérebro associou o travesseiro com rolamento de pensamentos — é um reflexo condicionado.',
+    sabotador: 'Quanto mais você tenta forçar o sono, mais o sistema nervoso simpático é ativado. A luta cria o problema.',
+    acao: 'Regra dos 20 min: se não dormiu, levante. Faça algo relaxante com luz baixa. Volte somente com sono.',
+    peso: 5
+  },
+  {
+    id: 'exercicio_noite', nivel: 1, categoria: 'exercicio',
+    titulo: '"Academia às 22h me ajuda a gastar energia"',
+    mito: '🏋️ O Mito',
+    realidade: 'Exercício intenso à noite eleva cortisol e temperatura corporal — dois inimigos do início do sono. O efeito dura 2-4h após o treino.',
+    sabotador: 'O corpo precisa de queda na temperatura central para iniciar o sono. Exercício intenso atrasa exatamente esse processo.',
+    acao: 'Prefira exercício até 17h. Se treinar à noite, faça algo leve — caminhada ou yoga, não HIIT.',
+    peso: 3
+  },
+  {
+    id: 'melatonina', nivel: 1, categoria: 'substancias',
+    titulo: '"Melatonina é natural, posso tomar sempre"',
+    mito: '💊 O Mito',
+    realidade: 'Melatonina é um sinalizador de horário, não um sedativo. Doses acima de 0.5mg podem saturar receptores e paradoxalmente piorar a regulação circadiana a longo prazo.',
+    sabotador: 'Uso crônico pode suprimir a produção endógena. É como usar muleta quando a perna está saudável.',
+    acao: 'Use apenas para ajuste de fuso horário ou sob orientação médica. Dose eficaz: 0.3-0.5mg, 1h antes de dormir.',
+    peso: 3
+  },
+  {
+    id: 'ambiente', nivel: 1, categoria: 'ambiente',
+    titulo: '"Temperatura do quarto não importa muito"',
+    mito: '🌡️ O Mito',
+    realidade: 'A queda de temperatura corporal é um gatilho fisiológico do sono. Quarto quente (>22°C) impede essa queda e reduz o sono profundo.',
+    sabotador: 'Temperatura ideal: 18-20°C. Cada grau acima disso impacta mensuravelmente a arquitetura do sono.',
+    acao: 'Abra janelas, use ventilador. Se não tiver AC, banho morno antes de dormir paradoxalmente refresca (dissipa calor pela pele).',
+    peso: 3
+  },
+  {
+    id: 'horario', nivel: 2, categoria: 'comportamento',
+    titulo: '"Sou coruja — meu horário é diferente"',
+    mito: '🦉 O Mito (parcialmente verdadeiro)',
+    realidade: 'Cronotipos existem de verdade. Mas a maioria das "corujas urbanas" criou o padrão via exposição à luz artificial noturna — não é genética pura.',
+    sabotador: 'Luz azul artificial à noite e ausência de luz solar pela manhã são as maiores causas do cronotipo noturno adquirido.',
+    acao: 'Tente 10 min de luz solar logo ao acordar. Em 2-3 semanas seu relógio interno pode adiantar naturalmente 1-2h.',
+    peso: 2
+  },
+  {
+    id: 'cochilo', nivel: 2, categoria: 'comportamento',
+    titulo: '"Cochilo de tarde recupera energia para a noite"',
+    mito: '😴 O Mito',
+    realidade: 'Cochilo de mais de 30 min depois das 15h drena a "pressão de sono" acumulada — e você não conseguirá dormir no horário desejado.',
+    sabotador: 'A adenosina (molécula do cansaço) é o combustível do sono noturno. Cochilo longo a descarrega prematuramente.',
+    acao: 'Se precisar, cochilo de 20 min (cronômetro!) até 14h. O "nap de café" (tomar café imediatamente antes do cochilo de 20 min) é evidenciado.',
+    peso: 2
+  }
+];
+
+// ═══════════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════════
+const QUESTIONS = [
+  {
+    id:'nome', type:'text',
+    step:'1 de 6',
+    q:'Como podemos te chamar?',
+    sub:'Vamos personalizar sua jornada de sono.',
+    placeholder:'Seu nome...'
+  },
+  {
+    id:'rotina', type:'options', step:'2 de 6',
+    q:'Você tem um horário fixo para dormir?',
+    sub:'Rotina de sono consistente',
+    opts:['Nunca','Raramente','Às vezes','Frequentemente','Sempre']
+  },
+  {
+    id:'telas', type:'options', step:'3 de 6',
+    q:'Você usa celular/TV na cama antes de dormir?',
+    sub:'Exposição à luz azul noturna',
+    opts:['Nunca','Raramente','Às vezes','Frequentemente','Sempre']
+  },
+  {
+    id:'cafe', type:'options', step:'4 de 6',
+    q:'Você toma café, chá preto ou energético depois das 15h?',
+    sub:'Consumo de cafeína',
+    opts:['Nunca','Raramente','Às vezes','Frequentemente','Sempre']
+  },
+  {
+    id:'stress', type:'options', step:'5 de 6',
+    q:'Você fica ruminando pensamentos ao tentar dormir?',
+    sub:'Ativação cognitiva noturna',
+    opts:['Nunca','Raramente','Às vezes','Frequentemente','Sempre']
+  },
+  {
+    id:'ambiente', type:'options', step:'6 de 6',
+    q:'Seu quarto é escuro, silencioso e fresco à noite?',
+    sub:'Ambiente do sono',
+    opts:['Nunca','Raramente','Às vezes','Frequentemente','Sempre']
+  }
+];
+
+// inverse: "Nunca" no uso de telas = bom; "Sempre" = ruim
+const INV = ['telas','cafe','stress'];
+const SCORES_MAP = {'Nunca':0,'Raramente':1,'Às vezes':2,'Frequentemente':3,'Sempre':4};
+
+let ob = { idx: 0, answers: {} };
+
+function renderOnboard() {
+  const q = QUESTIONS[ob.idx];
+  const c = document.getElementById('onboard-container');
+
+  if(q.type === 'text') {
+    c.innerHTML = `
+      <div class="onboard-step">${q.step}</div>
+      <div class="onboard-q">${q.q}</div>
+      <div class="onboard-sub">${q.sub}</div>
+      <input id="ob-input" type="text" placeholder="${q.placeholder}" value="${ob.answers[q.id]||''}"
+        style="width:100%;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+               color:var(--text);font-size:16px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:16px"
+        onkeyup="if(event.key==='Enter')obNext()">
+      <div style="flex:1"></div>
+      <button class="btn" onclick="obNext()">Continuar →</button>
+    `;
+    setTimeout(()=>document.getElementById('ob-input')?.focus(),100);
+  } else {
+    c.innerHTML = `
+      <div class="onboard-step">${q.step}</div>
+      <div class="onboard-q">${q.q}</div>
+      <div class="onboard-sub">${q.sub}</div>
+      <div class="option-list" id="ob-opts">
+        ${q.opts.map(o=>`<div class="option-item ${ob.answers[q.id]===o?'selected':''}"
+          onclick="obSelect(this,'${o}')">
+          <div class="option-dot"></div>${o}</div>`).join('')}
+      </div>
+      <div style="height:16px"></div>
+      ${ob.answers[q.id] ? `<button class="btn" onclick="obNext()">Continuar →</button>` : ''}
+    `;
+  }
+}
+
+function obSelect(el, val) {
+  document.querySelectorAll('#ob-opts .option-item').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  ob.answers[QUESTIONS[ob.idx].id] = val;
+  // auto advance after 300ms
+  setTimeout(obNext, 300);
+}
+
+function obNext() {
+  const q = QUESTIONS[ob.idx];
+  if(q.type === 'text') {
+    const v = document.getElementById('ob-input')?.value?.trim();
+    if(!v) return;
+    ob.answers[q.id] = v;
+  }
+  if(!ob.answers[q.id]) return;
+
+  ob.idx++;
+  if(ob.idx < QUESTIONS.length) {
+    renderOnboard();
+  } else {
+    finishOnboard();
+  }
+}
+
+function finishOnboard() {
+  // Calculate SHI
+  let raw = 0, total = 0;
+  ['rotina','telas','cafe','stress','ambiente'].forEach(k => {
+    const val = SCORES_MAP[ob.answers[k]] ?? 2;
+    const bad = INV.includes(k) ? val : (4-val);
+    raw += bad; total += 4;
+  });
+  const shi = Math.round(100 - (raw/total)*100);
+
+  state.nome = ob.answers.nome || 'Usuário';
+  state.shi = shi;
+  state.onboarded = true;
+  state.mitosDesbloqueados = unlockMitos(shi);
+  save();
+
+  // Show score reveal
+  const c = document.getElementById('onboard-container');
+  c.innerHTML = `
+    <div class="score-reveal">
+      <div class="score-ring">
+        <svg viewBox="0 0 160 160" width="160" height="160">
+          <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12"/>
+          <circle cx="80" cy="80" r="68" fill="none" stroke="url(#ring2)" stroke-width="12"
+            stroke-linecap="round" stroke-dasharray="427" id="reveal-ring" stroke-dashoffset="427"/>
+          <defs><linearGradient id="ring2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#6c63ff"/><stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="score-ring-inner">
+          <span class="score-num">${shi}</span>
+          <span class="score-label">SHI</span>
+        </div>
+      </div>
+      <h2>${scoreLabel(shi)}</h2>
+      <p style="margin-bottom:32px">${scoreDesc(shi)}</p>
+      <button class="btn" onclick="enterApp()">Começar minha jornada →</button>
+    </div>
+  `;
+  // animate ring
+  setTimeout(()=>{
+    const r = document.getElementById('reveal-ring');
+    if(r) r.style.strokeDashoffset = 427 - (427 * shi/100);
+    r.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+  }, 100);
+}
+
+function scoreLabel(s) {
+  if(s>=80) return '🌟 Excelente higiene!';
+  if(s>=60) return '🙂 Boa base a melhorar';
+  if(s>=40) return '⚠️ Sabotadores presentes';
+  return '🔴 Precisa de atenção urgente';
+}
+function scoreDesc(s) {
+  if(s>=80) return 'Sua higiene do sono já está muito bem calibrada. Vamos refiná-la ao máximo.';
+  if(s>=60) return 'Você tem uma fundação boa, mas há padrões sabotando sua recuperação. Vamos identificá-los.';
+  if(s>=40) return 'Identificamos comportamentos que impactam diretamente sua qualidade de sono. Temos trabalho a fazer.';
+  return 'Múltiplos gatilhos estão ativos. Mas com consistência, resultados aparecem em 2-3 semanas.';
+}
+
+function unlockMitos(shi) {
+  return MITOS
+    .filter(m => (shi >= 80 ? true : shi >= 40 ? m.nivel <= 1 : m.nivel === 0))
+    .map(m => m.id);
+}
+
+// ═══════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════
+function goTo(screen, el) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+
+  if(screen==='home') refreshHome();
+  if(screen==='mitos') renderMitos();
+  if(screen==='checkin') {
+    document.getElementById('checkin-date').textContent =
+      new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+    // reset toggles
+    document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('on'));
+    state.toggles = {};
+  }
+  if(screen==='perfil') refreshPerfil();
+}
+
+function enterApp() {
+  document.getElementById('screen-onboard').classList.remove('active');
+  document.getElementById('bottomnav').style.display = 'flex';
+  goTo('home', document.getElementById('nav-home'));
+}
+
+// ═══════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════
+function refreshHome() {
+  document.getElementById('shi-score').textContent = state.shi;
+  document.getElementById('avatar-initials').textContent = state.nome?.[0]?.toUpperCase()||'U';
+
+  // ring
+  const r = document.getElementById('ring-progress');
+  if(r) {
+    setTimeout(()=>{
+      r.style.transition = 'stroke-dashoffset 1s ease';
+      r.style.strokeDashoffset = 427 - (427 * state.shi / 100);
+    }, 100);
+  }
+
+  // consciousness
+  const maxCons = 200;
+  const pct = Math.min(100, (state.consciousness/maxCons)*100);
+  document.getElementById('consciousness-bar').style.width = pct+'%';
+  document.getElementById('consciousness-pts').textContent = state.consciousness+' pts';
+
+  document.getElementById('stat-dias').textContent = state.diasSeguidos;
+  document.getElementById('stat-acoes').textContent = state.acoesAplicadas;
+
+  // mission
+  const missions = [
+    {title:'Faça seu primeiro Check-in', desc:'Registre como foi sua noite e comportamentos de hoje.'},
+    {title:'Zero telas às 22h esta noite', desc:'Desative notificações e coloque o celular carregando longe da cama.'},
+    {title:'Última cafeína até 13h', desc:'Troque o café da tarde por água ou chá de camomila.'},
+    {title:'Leia um mito desbloqueado', desc:'Conhecimento é o primeiro passo para mudança real.'},
+  ];
+  const m = missions[state.checkins.length % missions.length];
+  document.getElementById('mission-title').textContent = m.title;
+  document.getElementById('mission-desc').textContent = m.desc;
+
+  // insight
+  const insight = generateInsight();
+  if(insight) {
+    document.getElementById('insight-text').textContent = insight;
+    document.getElementById('insight-box').style.display = 'flex';
+  }
+
+  // unlock notification
+  if(state.mitosDesbloqueados.length > 0 && state.mitosLidos.length === 0) {
+    document.getElementById('unlock-row').style.display = 'flex';
+  }
+}
+
+function generateInsight() {
+  const logs = state.checkins.slice(-7);
+  if(logs.length < 2) return null;
+
+  const cafeNights = logs.filter(l=>l.cafe).length;
+  const telasNights = logs.filter(l=>l.telas).length;
+  const avgSleep = logs.reduce((a,b)=>a+b.sleep,0)/logs.length;
+
+  if(cafeNights >= 3 && avgSleep < 6)
+    return `Nos últimos ${logs.length} dias com café à noite, sua qualidade média de sono foi ${avgSleep.toFixed(1)}/10. Correlação detectada ☕`;
+  if(telasNights >= 3)
+    return `Telas antes de dormir apareceram em ${telasNights} dos últimos ${logs.length} check-ins. Isso pode estar atrasando seu início de sono.`;
+  return null;
+}
+
+// ═══════════════════════════════════════════════
+// CHECK-IN
+// ═══════════════════════════════════════════════
+let activeToggles = {};
+
+function toggleBtn(el, key) {
+  el.classList.toggle('on');
+  activeToggles[key] = el.classList.contains('on');
+}
+
+function submitCheckin() {
+  const entry = {
+    date: new Date().toISOString(),
+    sleep: +document.getElementById('sl-sleep').value,
+    latency: +document.getElementById('sl-latency').value,
+    mood: +document.getElementById('sl-mood').value,
+    cafe: !!activeToggles.cafe,
+    alcool: !!activeToggles.alcool,
+    telas: !!activeToggles.telas,
+    exercicio: !!activeToggles.exercicio,
+    stress: !!activeToggles.stress,
+    meditacao: !!activeToggles.meditacao,
+  };
+
+  state.checkins.push(entry);
+  state.diasSeguidos++;
+
+  // update SHI (simple recalc based on last 7 days)
+  recalcSHI();
+
+  // unlock new mitos based on new shi
+  const newUnlocks = unlockMitos(state.shi).filter(id => !state.mitosDesbloqueados.includes(id));
+  state.mitosDesbloqueados = [...new Set([...state.mitosDesbloqueados, ...newUnlocks])];
+
+  // consciousness: +3 per day
+  state.consciousness += 3;
+
+  save();
+
+  // show toast then go home
+  showToast('✅ Check-in salvo! +3 pts de Consciência');
+  setTimeout(()=>goTo('home', document.getElementById('nav-home')), 1400);
+  activeToggles = {};
+}
+
+function recalcSHI() {
+  const logs = state.checkins.slice(-7);
+  if(logs.length === 0) return;
+  const avgSleep = logs.reduce((a,b)=>a+b.sleep,0)/logs.length;
+  const pctTelas = logs.filter(l=>l.telas).length/logs.length;
+  const pctCafe = logs.filter(l=>l.cafe).length/logs.length;
+  const pctStress = logs.filter(l=>l.stress).length/logs.length;
+  const base = state.shi;
+  const delta = ((avgSleep/10)*30) - (pctTelas*15) - (pctCafe*15) - (pctStress*10);
+  state.shi = Math.max(10, Math.min(100, Math.round(base*0.8 + delta*2)));
+}
+
+// ═══════════════════════════════════════════════
+// MITOS
+// ═══════════════════════════════════════════════
+function renderMitos() {
+  const list = document.getElementById('mitos-list');
+  const unlocked = MITOS.filter(m => state.mitosDesbloqueados.includes(m.id));
+  const locked = MITOS.filter(m => !state.mitosDesbloqueados.includes(m.id));
+
+  document.getElementById('mitos-count').textContent = `${unlocked.length}/${MITOS.length}`;
+
+  list.innerHTML = '';
+
+  if(unlocked.length === 0) {
+    list.innerHTML = '<div class="text-muted" style="text-align:center;padding:32px">Complete o onboarding para desbloquear mitos.</div>';
+    return;
+  }
+
+  unlocked.forEach(m => {
+    const lido = state.mitosLidos.includes(m.id);
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background:var(--surface); border:1px solid ${lido?'var(--border)':'rgba(108,99,255,.3)'};
+      border-radius:18px; padding:18px; cursor:pointer; transition:all .2s;
+      ${!lido?'background:rgba(108,99,255,.07)':''}
+    `;
+    div.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:${lido?'var(--muted)':'var(--accent2)'};margin-bottom:6px">
+            ${lido?'✓ Lido':'🆕 Novo'}
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;line-height:1.35">${m.titulo}</div>
+        </div>
+        <div style="font-size:22px;flex-shrink:0">${m.mito.split(' ')[0]}</div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+        <span>Ver completo</span><span>→</span>
+      </div>
+    `;
+    div.onclick = () => openStory(m);
+    list.appendChild(div);
+  });
+
+  if(locked.length > 0) {
+    const sep = document.createElement('div');
+    sep.innerHTML = `<div class="sec-title" style="padding:12px 0 8px;font-size:11px">🔒 Bloqueados (${locked.length})</div>`;
+    list.appendChild(sep);
+    locked.forEach(m => {
+      const div = document.createElement('div');
+      div.style.cssText = 'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:18px;opacity:.5';
+      div.innerHTML = `<div style="font-size:24px;margin-bottom:8px">🔒</div>
+        <div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700">${m.titulo}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Melhore seu Score SHI para desbloquear</div>`;
+      list.appendChild(div);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// STORY
+// ═══════════════════════════════════════════════
+let storyMito = null, storyStep = 0;
+const STORY_STEPS = [
+  m => ({ tag:'O Mito', headline: m.titulo, body: 'Quantas vezes você já ouviu isso? Esse é um dos padrões mais comuns que vemos em quem tem dificuldades com o sono.' }),
+  m => ({ tag:'A Realidade', headline:'O que a ciência diz', body: m.realidade }),
+  m => ({ tag:'O Sabotador', headline:'Por que isso destrói seu sono', body: m.sabotador }),
+  m => ({ tag:'A Micro-Ação', headline:'O que fazer hoje à noite', body: m.acao }),
+];
+
+function openStory(mito) {
+  storyMito = mito; storyStep = 0;
+  const ov = document.getElementById('story-overlay');
+  ov.classList.add('active');
+  renderStoryStep();
+}
+
+function renderStoryStep() {
+  const prog = document.getElementById('story-progress');
+  prog.innerHTML = STORY_STEPS.map((_,i)=>`
+    <div class="story-seg">
+      <div class="story-seg-fill ${i<storyStep?'done':''}" id="seg-${i}"></div>
+    </div>`).join('');
+
+  setTimeout(()=>{
+    const seg = document.getElementById('seg-'+storyStep);
+    if(seg) seg.style.width='100%';
+  }, 50);
+
+  const data = STORY_STEPS[storyStep](storyMito);
+  document.getElementById('story-content').innerHTML = `
+    <div class="story-tag">${data.tag}</div>
+    <div class="story-headline">${data.headline}</div>
+    <div class="story-body">${data.body}</div>
+  `;
+
+  const btn = document.getElementById('story-cta-btn');
+  if(storyStep < STORY_STEPS.length - 1) {
+    btn.textContent = '➜ Próximo';
+    btn.onclick = () => { storyStep++; renderStoryStep(); };
+  } else {
+    btn.textContent = '✅ Vou aplicar hoje!';
+    btn.onclick = () => applyAction();
+  }
+}
+
+function applyAction() {
+  if(!state.mitosLidos.includes(storyMito.id)) {
+    state.mitosLidos.push(storyMito.id);
+    state.consciousness += 2; // +2 read
+  }
+  if(!state.acoesFeitas.includes(storyMito.id)) {
+    state.acoesFeitas.push(storyMito.id);
+    state.acoesAplicadas++;
+    state.consciousness += 5; // +5 action
+  }
+  save();
+  document.getElementById('story-overlay').classList.remove('active');
+  showToast('🎯 +5 pts de Consciência! Ação registrada.');
+  if(document.getElementById('screen-mitos').classList.contains('active')) renderMitos();
+}
+
+// ═══════════════════════════════════════════════
+// PERFIL
+// ═══════════════════════════════════════════════
+function refreshPerfil() {
+  document.getElementById('perfil-nome').textContent = state.nome || '—';
+  document.getElementById('perfil-avatar').textContent = state.nome?.[0]?.toUpperCase()||'?';
+  document.getElementById('p-shi').textContent = state.shi;
+  document.getElementById('p-cons').textContent = state.consciousness;
+  document.getElementById('p-dias').textContent = state.diasSeguidos;
+
+  const nivel = state.shi >= 80 ? 'Avançado' : state.shi >= 40 ? 'Intermediário' : 'Iniciante';
+  document.getElementById('perfil-nivel').textContent = nivel;
+
+  const hist = document.getElementById('checkin-history');
+  if(state.checkins.length === 0) {
+    hist.innerHTML = '<div class="text-muted" style="text-align:center;padding:16px">Sem check-ins ainda.</div>';
+    return;
+  }
+  hist.innerHTML = [...state.checkins].reverse().slice(0,10).map(c=>{
+    const d = new Date(c.date).toLocaleDateString('pt-BR',{day:'numeric',month:'short'});
+    const icons = [c.cafe?'☕':'',c.telas?'📱':'',c.alcool?'🍷':'',c.stress?'😰':'',c.meditacao?'🧘':''].filter(Boolean).join(' ');
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <div>
+        <div style="font-size:13px;font-weight:500">${d}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${icons||'sem registros'}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:${c.sleep>=7?'var(--green)':c.sleep>=5?'var(--amber)':'var(--red)'}">${c.sleep}/10</div>
+        <div style="font-size:11px;color:var(--muted)">${c.latency}min adorm.</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `
+    position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+    background:var(--surface2);border:1px solid var(--border);
+    color:var(--text);padding:12px 20px;border-radius:14px;
+    font-size:13px;z-index:999;white-space:nowrap;
+    animation:fadeIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);
+  `;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2000);
+}
+
+// ═══════════════════════════════════════════════
+// RESET (demo)
+// ═══════════════════════════════════════════════
+function resetApp() {
+  if(!confirm('Reiniciar o app? Todos os dados serão apagados.')) return;
+  localStorage.removeItem('sonolab');
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+if(state.onboarded) {
+  document.getElementById('screen-onboard').classList.remove('active');
+  document.getElementById('bottomnav').style.display = 'flex';
+  goTo('home', document.getElementById('nav-home'));
+} else {
+  ob.idx = 0;
+  renderOnboard();
+}
+
+// close story on tap left
+document.getElementById('story-overlay').addEventListener('click', function(e) {
+  const w = this.offsetWidth;
+  if(e.clientX < w * 0.2) {
+    if(storyStep > 0) { storyStep--; renderStoryStep(); }
+    else this.classList.remove('active');
+  }
+});
+</script>
+</body>
+</html>
